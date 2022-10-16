@@ -1,20 +1,28 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/rwcarlsen/goexif/exif"
 	"github.com/tidwall/gjson"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
 func main() {
 	fmt.Println("Welcome to the Go File Renamer")
 
-	//dir := "C:\\Users\\Thomas\\Documents\\Foto-Sync\\2022\\09 - Höhlenfahrt\\"
-	dir := "./img/"
+	sourceDir := flag.String("source", ".", "Specifies the folder of the images to rename. Default is current directory.")
+	topic := flag.String("topic", "media", "Defines the topic string to be included in the filename.")
+	flag.Parse()
+
+	dir := filepath.ToSlash(*sourceDir)
+	if !strings.HasSuffix(dir, "/") {
+		dir = dir + "/"
+	}
 	entries, err := os.ReadDir(dir)
 	handleFatal("reading directory entries", err)
 
@@ -36,7 +44,7 @@ func main() {
 			handleFatal(fmt.Sprintf("marshaling EXIF data as json for file `%s`", v.Name()), err)
 
 			jsonString := string(jsonByte)
-			exifDateTime = addressOfTime(parseJsonDateTime(jsonString, "DateTime"))
+			exifDateTime = parseJsonDateTime(jsonString, "DateTime")
 		} else {
 			handleWarn(fmt.Sprintf("decoding EXIF for `%s` -- no EXIF available", v.Name()), err)
 		}
@@ -60,11 +68,10 @@ func main() {
 	sort.Sort(imgInfoList(imgInfoArray))
 
 	for _, v := range imgInfoArray {
-		var topic string = "Höhlenfahrt"
 		newFilename := fmt.Sprintf("%d-%02d-%02d_%02d%02d_%s_%04d%s",
 			v.dateTime.Year(), v.dateTime.Month(), v.dateTime.Day(),
 			v.dateTime.Hour(), v.dateTime.Minute(),
-			topic, count, filepath.Ext(v.path))
+			*topic, count, filepath.Ext(v.path))
 		count++
 		newPath := dir + newFilename
 
@@ -106,17 +113,23 @@ func handleFatal(action string, err error) {
 	}
 }
 
-func handleWarn(action string, err error) {
+func handleWarn(action string, err error) bool {
 	if err != nil {
 		fmt.Printf("Warning while %s: \"%s\"\n", action, err.Error())
+		return true
+	} else {
+		return false
 	}
 }
 
-func parseJsonDateTime(jsonString, key string) time.Time {
+func parseJsonDateTime(jsonString, key string) *time.Time {
 	jsonValue := gjson.Get(jsonString, key)
 	time, err := time.Parse("2006:01:02 15:04:05", jsonValue.Str)
-	handleFatal(fmt.Sprintf("parsing date `%s` from EXIF attribute `%s`", jsonValue, key), err)
-	return time
+	if handleWarn(fmt.Sprintf("parsing date `%s` from EXIF attribute `%s`", jsonValue, key), err) {
+		return nil
+	} else {
+		return &time
+	}
 }
 
 func addressOfTime(time time.Time) *time.Time {

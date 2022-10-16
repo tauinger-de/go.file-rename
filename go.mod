@@ -1,4 +1,4 @@
-module goFiRe
+module gofire
 
 go 1.19
 
