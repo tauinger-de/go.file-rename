@@ -3,7 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/rwcarlsen/goexif/exif"
+	"gofire/common"
+	"gofire/exifnative"
 	"os"
 	"path/filepath"
 	"sort"
@@ -25,17 +26,19 @@ func main() {
 		dir = dir + "/"
 	}
 	entries, err := os.ReadDir(dir)
-	handleFatal("reading directory entries", err)
+	common.HandleFatal("reading directory entries", err)
+	fmt.Printf("Found %d directory entries\n", len(entries))
 
 	count := 0
 	var imgInfoArray []imgInfo
+	exifReader := exifnative.NewReader()
 
 	for _, v := range entries {
 		// open file
 		imgFile, err := os.Open(dir + v.Name())
-		handleFatal(fmt.Sprintf("opening file `%s`", v.Name()), err)
+		common.HandleFatal(fmt.Sprintf("opening file `%s`", v.Name()), err)
 		fileInfo, err := v.Info()
-		handleFatal(fmt.Sprintf("retrieving file details for `%s`", v.Name()), err)
+		common.HandleFatal(fmt.Sprintf("retrieving file details for `%s`", v.Name()), err)
 
 		// skip dirs
 		if fileInfo.IsDir() {
@@ -62,14 +65,9 @@ func main() {
 		modifiedDateTime = addressOfTime(fileInfo.ModTime())
 
 		// movies dont have EXIF data so we just skip EXIF parsing if we get an error here
-		metaData, err := exif.Decode(imgFile)
-		if err == nil || !exif.IsCriticalError(err) {
-			dt, err := metaData.DateTime()
-			if !handleWarn("getting 'DateTime' EXIF entry", err) {
-				exifDateTime = &dt
-			}
-		} else {
-			handleWarn(fmt.Sprintf("decoding EXIF for `%s` -- no EXIF available", v.Name()), err)
+		dt, err := exifReader.DateTimeOriginal(imgFile)
+		if !common.HandleWarn(fmt.Sprintf("getting 'DateTime' EXIF entry for file `%s`", imgFile.Name()), err) {
+			exifDateTime = &dt
 		}
 
 		var finalDateTime *time.Time = nil
@@ -84,7 +82,7 @@ func main() {
 		}
 
 		err = imgFile.Close()
-		handleWarn(fmt.Sprintf("closing file `%s`", imgFile.Name()), err)
+		common.HandleWarn(fmt.Sprintf("closing file `%s`", imgFile.Name()), err)
 
 		imgInfoArray = append(imgInfoArray, imgInfo{
 			path:     dir + v.Name(),
@@ -112,7 +110,7 @@ func main() {
 		if _, err := os.Stat(newPath); err != nil {
 			// rename it!
 			err = os.Rename(v.path, newPath)
-			handleWarn(fmt.Sprintf("renaming `%s` to `%s`", v.path, newPath), err)
+			common.HandleWarn(fmt.Sprintf("renaming `%s` to `%s`", v.path, newPath), err)
 		} else {
 			fmt.Printf("File with new target filename `%s` already exists -- ABORTING. Rerun with different topic string.\n", newPath)
 			os.Exit(1)
@@ -139,22 +137,6 @@ func (l imgInfoList) Less(i, j int) bool {
 
 func (l imgInfoList) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
-}
-
-func handleFatal(action string, err error) {
-	if err != nil {
-		fmt.Printf("Error while %s: \"%s\"\n", action, err.Error())
-		os.Exit(1)
-	}
-}
-
-func handleWarn(action string, err error) bool {
-	if err != nil {
-		fmt.Printf("Warning while %s: \"%s\"\n", action, err.Error())
-		return true
-	} else {
-		return false
-	}
 }
 
 func addressOfTime(t time.Time) *time.Time {
