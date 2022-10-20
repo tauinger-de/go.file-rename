@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/rwcarlsen/goexif/exif"
-	"github.com/tidwall/gjson"
 	"os"
 	"path/filepath"
 	"sort"
@@ -27,24 +26,30 @@ func main() {
 	handleFatal("reading directory entries", err)
 
 	count := 0
-	imgInfoArray := []imgInfo{}
+	var imgInfoArray []imgInfo
 
 	for _, v := range entries {
+		// open file
 		imgFile, err := os.Open(dir + v.Name())
 		handleFatal(fmt.Sprintf("opening file `%s`", v.Name()), err)
 
+		// get modification time
 		var fileModDateTime, exifDateTime *time.Time
 		fileInfo, err := v.Info()
 		fileModDateTime = addressOfTime(fileInfo.ModTime())
 
+		// skip dirs
+		if fileInfo.IsDir() {
+			continue
+		}
+
 		// movies dont have EXIF data so we just skip EXIF parsing if we get an error here
 		metaData, err := exif.Decode(imgFile)
 		if err == nil || !exif.IsCriticalError(err) {
-			jsonByte, err := metaData.MarshalJSON()
-			handleFatal(fmt.Sprintf("marshaling EXIF data as json for file `%s`", v.Name()), err)
-
-			jsonString := string(jsonByte)
-			exifDateTime = parseJsonDateTime(jsonString, "DateTime")
+			dt, err := metaData.DateTime()
+			if !handleWarn("getting 'DateTime' EXIF entry", err) {
+				exifDateTime = &dt
+			}
 		} else {
 			handleWarn(fmt.Sprintf("decoding EXIF for `%s` -- no EXIF available", v.Name()), err)
 		}
@@ -75,6 +80,12 @@ func main() {
 		count++
 		newPath := dir + newFilename
 
+		// skip if name doesn't change
+		if v.path == newPath {
+			continue
+		}
+
+		// check for existing file
 		if _, err := os.Stat(newPath); err != nil {
 			err = os.Rename(v.path, newPath)
 			handleWarn(fmt.Sprintf("renaming `%s` to `%s`", v.path, newPath), err)
@@ -84,7 +95,7 @@ func main() {
 		}
 	}
 
-	fmt.Printf("Renamed %d files\n", count)
+	fmt.Printf("Processed %d files\n", count)
 }
 
 type imgInfo struct {
@@ -122,16 +133,6 @@ func handleWarn(action string, err error) bool {
 	}
 }
 
-func parseJsonDateTime(jsonString, key string) *time.Time {
-	jsonValue := gjson.Get(jsonString, key)
-	time, err := time.Parse("2006:01:02 15:04:05", jsonValue.Str)
-	if handleWarn(fmt.Sprintf("parsing date `%s` from EXIF attribute `%s`", jsonValue, key), err) {
-		return nil
-	} else {
-		return &time
-	}
-}
-
-func addressOfTime(time time.Time) *time.Time {
-	return &time
+func addressOfTime(t time.Time) *time.Time {
+	return &t
 }
