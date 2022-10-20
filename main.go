@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const dateTimePattern string = "%d-%02d-%02d %02d.%02d.%02d"
+
 func main() {
 	fmt.Println("Welcome to the Go File Renamer")
 
@@ -46,7 +48,7 @@ func main() {
 		// get date-time from filename
 		//regexp := regexp.MustCompile("(\\d{4})-(\\d{2})-(\\d{2})\\s(\\d{2})\\.(\\d{2})\\.(\\d{2}).*")
 		var year, month, day, hour, min, sec int
-		_, err = fmt.Sscanf(v.Name(), "%d-%02d-%02d %02d.%02d.%02d", &year, &month, &day, &hour, &min, &sec)
+		_, err = fmt.Sscanf(v.Name(), dateTimePattern, &year, &month, &day, &hour, &min, &sec)
 		if err == nil {
 			// alternativ time.Parse() nach regexp match auf erwartetes format und substring
 			filenameDateTime = addressOfTime(
@@ -93,7 +95,8 @@ func main() {
 	sort.Sort(imgInfoList(imgInfoArray))
 
 	for _, v := range imgInfoArray {
-		newFilename := fmt.Sprintf("%d-%02d-%02d %02d.%02d.%02d %s-%04d%s",
+		// build new filename
+		newFilename := fmt.Sprintf(dateTimePattern+" %s-%04d%s",
 			v.dateTime.Year(), v.dateTime.Month(), v.dateTime.Day(),
 			v.dateTime.Hour(), v.dateTime.Minute(), v.dateTime.Second(),
 			*topic, count, filepath.Ext(v.path))
@@ -107,6 +110,7 @@ func main() {
 
 		// check for existing file
 		if _, err := os.Stat(newPath); err != nil {
+			// rename it!
 			err = os.Rename(v.path, newPath)
 			handleWarn(fmt.Sprintf("renaming `%s` to `%s`", v.path, newPath), err)
 		} else {
