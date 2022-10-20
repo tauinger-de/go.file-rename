@@ -32,16 +32,32 @@ func main() {
 		// open file
 		imgFile, err := os.Open(dir + v.Name())
 		handleFatal(fmt.Sprintf("opening file `%s`", v.Name()), err)
-
-		// get modification time
-		var fileModDateTime, exifDateTime *time.Time
 		fileInfo, err := v.Info()
-		fileModDateTime = addressOfTime(fileInfo.ModTime())
+		handleFatal(fmt.Sprintf("retrieving file details for `%s`", v.Name()), err)
 
 		// skip dirs
 		if fileInfo.IsDir() {
 			continue
 		}
+
+		// stuff
+		var filenameDateTime, modifiedDateTime, exifDateTime *time.Time
+
+		// get date-time from filename
+		//regexp := regexp.MustCompile("(\\d{4})-(\\d{2})-(\\d{2})\\s(\\d{2})\\.(\\d{2})\\.(\\d{2}).*")
+		var year, month, day, hour, min, sec int
+		_, err = fmt.Sscanf(v.Name(), "%d-%02d-%02d %02d.%02d.%02d", &year, &month, &day, &hour, &min, &sec)
+		if err == nil {
+			// alternativ time.Parse() nach regexp match auf erwartetes format und substring
+			filenameDateTime = addressOfTime(
+				time.Date(year, time.Month(month), day, hour, min, sec, 0, time.Local),
+			)
+		} else {
+			filenameDateTime = nil
+		}
+
+		// get modification time
+		modifiedDateTime = addressOfTime(fileInfo.ModTime())
 
 		// movies dont have EXIF data so we just skip EXIF parsing if we get an error here
 		metaData, err := exif.Decode(imgFile)
@@ -56,7 +72,11 @@ func main() {
 
 		var finalDateTime *time.Time = nil
 		if exifDateTime == nil {
-			finalDateTime = fileModDateTime
+			if filenameDateTime == nil {
+				finalDateTime = modifiedDateTime
+			} else {
+				finalDateTime = filenameDateTime
+			}
 		} else {
 			finalDateTime = exifDateTime
 		}
@@ -73,9 +93,9 @@ func main() {
 	sort.Sort(imgInfoList(imgInfoArray))
 
 	for _, v := range imgInfoArray {
-		newFilename := fmt.Sprintf("%d-%02d-%02d_%02d%02d_%s_%04d%s",
+		newFilename := fmt.Sprintf("%d-%02d-%02d %02d.%02d.%02d %s-%04d%s",
 			v.dateTime.Year(), v.dateTime.Month(), v.dateTime.Day(),
-			v.dateTime.Hour(), v.dateTime.Minute(),
+			v.dateTime.Hour(), v.dateTime.Minute(), v.dateTime.Second(),
 			*topic, count, filepath.Ext(v.path))
 		count++
 		newPath := dir + newFilename
