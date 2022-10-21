@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gofire/common"
 	"gofire/exifnative"
+	"gofire/exiftool"
 	"os"
 	"path/filepath"
 	"sort"
@@ -31,7 +32,11 @@ func main() {
 
 	count := 0
 	var imgInfoArray []imgInfo
-	exifReader := exifnative.NewReader()
+	exifReader, err := exiftool.NewReader()
+	if err != nil {
+		fmt.Println("Hint: failed to instantiate ExifToolReader (" + err.Error() + ") -- falling back to native reader")
+		exifReader = exifnative.NativeExifReader{}
+	}
 
 	for _, v := range entries {
 		// open file
