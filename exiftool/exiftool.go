@@ -10,7 +10,7 @@ import (
 )
 
 func NewReader() (common.ExifReader, error) {
-	newExiftool, err := exiftool.NewExiftool()
+	newExiftool, err := exiftool.NewExiftool(exiftool.Charset("filename=utf8"))
 	if err != nil {
 		return nil, err
 	} else {
@@ -30,16 +30,27 @@ func (r ExifToolReader) Get(name string, file *os.File) (string, error) {
 }
 
 func (r ExifToolReader) DateTimeOriginal(file *os.File) (time.Time, error) {
-	metadata, _ := r.getMetadata(file)       // todo error
-	v, _ := metadata.GetString("CreateDate") // todo error
-	dt, _ := parseDateTime(v)                // todo error
-	return dt, nil
+	metadata, err := r.getMetadata(file)
+	if err == nil {
+		v, err := metadata.GetString("CreateDate")
+		if err == nil {
+			return parseDateTime(v)
+		} else {
+			return time.Time{}, err
+		}
+	} else {
+		return time.Time{}, err
+	}
 }
 
 func (r ExifToolReader) getMetadata(file *os.File) (*exiftool.FileMetadata, error) {
 	metadata := r.exiftool.ExtractMetadata(file.Name())
 	if len(metadata) == 1 {
-		return &metadata[0], nil
+		if metadata[0].Err != nil {
+			return nil, metadata[0].Err
+		} else {
+			return &metadata[0], nil
+		}
 	} else {
 		return nil, errors.New(fmt.Sprintf("Got %d instead of 1 result", len(metadata)))
 	}

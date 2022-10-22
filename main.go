@@ -33,8 +33,10 @@ func main() {
 	count := 0
 	var imgInfoArray []imgInfo
 	exifReader, err := exiftool.NewReader()
-	if err != nil {
-		fmt.Println("Hint: failed to instantiate ExifToolReader (" + err.Error() + ") -- falling back to native reader")
+	if err == nil {
+		fmt.Println("Using exiftool based EXIF reader")
+	} else {
+		fmt.Println("Using native EXIF reader -- failed to instantiate exiftool based reader (" + err.Error() + ") -- falling back to native reader")
 		exifReader = exifnative.NativeExifReader{}
 	}
 
@@ -76,22 +78,27 @@ func main() {
 		}
 
 		var finalDateTime *time.Time = nil
+		var dateTimeSource string
 		if exifDateTime == nil {
 			if filenameDateTime == nil {
 				finalDateTime = modifiedDateTime
+				dateTimeSource = "modificationDate"
 			} else {
 				finalDateTime = filenameDateTime
+				dateTimeSource = "filename"
 			}
 		} else {
 			finalDateTime = exifDateTime
+			dateTimeSource = "exif"
 		}
 
 		err = imgFile.Close()
 		common.HandleWarn(fmt.Sprintf("closing file `%s`", imgFile.Name()), err)
 
 		imgInfoArray = append(imgInfoArray, imgInfo{
-			path:     dir + v.Name(),
-			dateTime: *finalDateTime,
+			path:           dir + v.Name(),
+			dateTime:       *finalDateTime,
+			dateTimeSource: dateTimeSource,
 		})
 	}
 
@@ -108,6 +115,7 @@ func main() {
 
 		// skip if name doesn't change
 		if v.path == newPath {
+			fmt.Printf("  \"%s\" filename unchanged (%s)\n", filepath.Base(v.path), v.dateTimeSource)
 			continue
 		}
 
@@ -115,6 +123,7 @@ func main() {
 		if _, err := os.Stat(newPath); err != nil {
 			// rename it!
 			err = os.Rename(v.path, newPath)
+			fmt.Printf("  \"%s\" --> \"%s\" (%s)\n", filepath.Base(v.path), filepath.Base(newPath), v.dateTimeSource)
 			common.HandleWarn(fmt.Sprintf("renaming `%s` to `%s`", v.path, newPath), err)
 		} else {
 			fmt.Printf("File with new target filename `%s` already exists -- ABORTING. Rerun with different topic string.\n", newPath)
@@ -126,8 +135,9 @@ func main() {
 }
 
 type imgInfo struct {
-	path     string
-	dateTime time.Time
+	path           string
+	dateTime       time.Time
+	dateTimeSource string
 }
 
 type imgInfoList []imgInfo
