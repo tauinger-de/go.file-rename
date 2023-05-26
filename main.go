@@ -13,10 +13,11 @@ import (
 	"time"
 )
 
+const version = "1.2"
 const dateTimePattern string = "%d-%02d-%02d %02d.%02d.%02d"
 
 func main() {
-	fmt.Println("Welcome to the Go File Renamer")
+	fmt.Println("Welcome to the GoFileRenamer", version)
 
 	sourceDir := flag.String("source", ".", "Specifies the folder of the images to rename. Default is current directory.")
 	topic := flag.String("topic", "media", "Defines the topic string to be included in the filename.")
