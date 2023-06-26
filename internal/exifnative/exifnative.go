@@ -2,7 +2,7 @@ package exifnative
 
 import (
 	"github.com/rwcarlsen/goexif/exif"
-	"gofire/common"
+	"gofire/internal/common"
 	"os"
 	"time"
 )

@@ -3,8 +3,7 @@ package exiftool
 import (
 	"errors"
 	"fmt"
-	"github.com/barasher/go-exiftool"
-	"gofire/common"
+	"gofire/internal/common"
 	"os"
 	"time"
 )

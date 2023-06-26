@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gofire/common"
-	"gofire/exifnative"
-	"gofire/exiftool"
+	"gofire/internal/common"
+	"gofire/internal/exifnative"
+	"gofire/internal/exiftool"
 	"os"
 	"path/filepath"
 	"sort"
