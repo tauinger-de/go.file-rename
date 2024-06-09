@@ -32,7 +32,7 @@ func (r ExifToolReader) Get(name string, file *os.File) (string, error) {
 func (r ExifToolReader) DateTimeOriginal(file *os.File) (time.Time, error) {
 	metadata, err := r.getMetadata(file)
 	if err == nil {
-		v, err := metadata.GetString("CreateDate")
+		v, err := metadata.GetString("CreationDate")
 		if err == nil {
 			return parseDateTime(v)
 		} else {
@@ -57,5 +57,5 @@ func (r ExifToolReader) getMetadata(file *os.File) (*exiftool.FileMetadata, erro
 }
 
 func parseDateTime(v string) (time.Time, error) {
-	return time.Parse("2006:01:02 15:04:05", v)
+	return time.Parse("2006:01:02 15:04:05-07:00", v)
 }
