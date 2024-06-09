@@ -25,7 +25,7 @@ type ExifToolReader struct {
 	exiftool *exiftool.Exiftool
 }
 
-func (r ExifToolReader) Get(name string, file *os.File) (string, error) {
+func (r ExifToolReader) Get(_ string, _ *os.File) (string, error) {
 	return "", nil
 }
 

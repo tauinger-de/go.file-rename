@@ -62,12 +62,12 @@ func main() {
 
 		// get date-time from filename
 		//regexp := regexp.MustCompile("(\\d{4})-(\\d{2})-(\\d{2})\\s(\\d{2})\\.(\\d{2})\\.(\\d{2}).*")
-		var year, month, day, hour, min, sec int
-		_, err = fmt.Sscanf(v.Name(), dateTimePattern, &year, &month, &day, &hour, &min, &sec)
+		var year, month, day, hours, mins, secs int
+		_, err = fmt.Sscanf(v.Name(), dateTimePattern, &year, &month, &day, &hours, &mins, &secs)
 		if err == nil {
 			// alternativ time.Parse() nach regexp match auf erwartetes format und substring
 			filenameDateTime = addressOfTime(
-				time.Date(year, time.Month(month), day, hour, min, sec, 0, time.Local),
+				time.Date(year, time.Month(month), day, hours, mins, secs, 0, time.Local),
 			)
 		} else {
 			filenameDateTime = nil
