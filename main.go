@@ -13,20 +13,24 @@ import (
 	"time"
 )
 
-const version = "1.2"
+const version = "1.3"
 const dateTimePattern string = "%d-%02d-%02d %02d.%02d.%02d"
 
 func main() {
-	fmt.Println("Welcome to the GoFileRenamer", version)
+	fmt.Println("GoFileRenamer", version)
 
-	sourceDir := flag.String("source", ".", "Specifies the folder of the images to rename. Default is current directory.")
 	topic := flag.String("topic", "media", "Defines the topic string to be included in the filename.")
 	flag.Parse()
+	sourceDir := flag.Arg(0)
+	if len(sourceDir) == 0 {
+		sourceDir = "./"
+	}
 
-	dir := filepath.ToSlash(*sourceDir)
+	dir := filepath.ToSlash(sourceDir)
 	if !strings.HasSuffix(dir, "/") {
 		dir = dir + "/"
 	}
+
 	entries, err := os.ReadDir(dir)
 	common.HandleFatal("reading directory entries", err)
 	fmt.Printf("Found %d directory entries\n", len(entries))
