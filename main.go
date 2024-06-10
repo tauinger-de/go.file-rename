@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-const version = "1.3"
-const dateTimePattern string = "%d-%02d-%02d %02d.%02d.%02d"
+const version = "1.3.4"
+const dateTimePattern string = "%d-%02d-%02d_%02d.%02d.%02d"
 
 func main() {
 	fmt.Println("GoFileRenamer", version)
@@ -52,8 +52,8 @@ func main() {
 		fileInfo, err := v.Info()
 		common.HandleFatal(fmt.Sprintf("retrieving file details for `%s`", v.Name()), err)
 
-		// skip dirs
-		if fileInfo.IsDir() {
+		// skip dirs and dot-files
+		if fileInfo.IsDir() || fileInfo.Name()[0] == '.' {
 			continue
 		}
 
@@ -61,7 +61,6 @@ func main() {
 		var filenameDateTime, modifiedDateTime, exifDateTime *time.Time
 
 		// get date-time from filename
-		//regexp := regexp.MustCompile("(\\d{4})-(\\d{2})-(\\d{2})\\s(\\d{2})\\.(\\d{2})\\.(\\d{2}).*")
 		var year, month, day, hours, mins, secs int
 		_, err = fmt.Sscanf(v.Name(), dateTimePattern, &year, &month, &day, &hours, &mins, &secs)
 		if err == nil {
@@ -78,7 +77,7 @@ func main() {
 
 		// movies dont have EXIF data so we just skip EXIF parsing if we get an error here
 		dt, err := exifReader.DateTimeOriginal(imgFile)
-		if !common.HandleWarn(fmt.Sprintf("getting 'DateTime' EXIF entry for file `%s`", imgFile.Name()), err) {
+		if !common.HandleWarn(fmt.Sprintf("getting date & time EXIF entry for file `%s`", imgFile.Name()), err) {
 			exifDateTime = &dt
 		}
 
@@ -111,7 +110,7 @@ func main() {
 
 	for _, v := range imgInfoArray {
 		// build new filename
-		newFilename := fmt.Sprintf(dateTimePattern+" %s-%04d%s",
+		newFilename := fmt.Sprintf(dateTimePattern+"_%s_%04d%s",
 			v.dateTime.Year(), v.dateTime.Month(), v.dateTime.Day(),
 			v.dateTime.Hour(), v.dateTime.Minute(), v.dateTime.Second(),
 			*topic, count, filepath.Ext(v.path))
