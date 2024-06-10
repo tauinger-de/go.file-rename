@@ -32,11 +32,18 @@ func (r ExifToolReader) Get(_ string, _ *os.File) (string, error) {
 func (r ExifToolReader) DateTimeOriginal(file *os.File) (time.Time, error) {
 	metadata, err := r.getMetadata(file)
 	if err == nil {
+		// .MOV files have "CreationDate" with timezone and "CreateDate" without!
 		v, err := metadata.GetString("CreationDate")
 		if err == nil {
 			return parseDateTime(v)
 		} else {
-			return time.Time{}, err
+			// image files have "SubSecCreateDate" with timezone
+			v, err := metadata.GetString("SubSecCreateDate")
+			if err == nil {
+				return parseDateTime(v)
+			} else {
+				return time.Time{}, err
+			}
 		}
 	} else {
 		return time.Time{}, err
