@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const version = "1.3.4"
+const version = "1.4.0"
 const dateTimePattern string = "%d-%02d-%02d_%02d.%02d.%02d"
 
 func main() {

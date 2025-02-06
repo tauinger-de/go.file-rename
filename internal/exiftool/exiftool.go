@@ -6,6 +6,7 @@ import (
 	"github.com/barasher/go-exiftool"
 	"gofire/internal/common"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -37,17 +38,18 @@ func (r ExifToolReader) DateTimeOriginal(file *os.File) (time.Time, error) {
 		if err == nil {
 			return parseDateTime(v)
 		} else {
-			// image files have "SubSecCreateDate" with timezone
-			v, err := metadata.GetString("SubSecCreateDate")
-			if err == nil {
-				return parseDateTime(v)
-			} else {
-				return time.Time{}, err
+			fields := []string{"DateTimeOriginal", "FileModifyDate"}
+			for _, f := range fields {
+				v, err := metadata.GetString(f)
+				if err == nil {
+					return parseDateTime(v)
+				}
 			}
+			err = fmt.Errorf("EXIF data has none of these keys: %s",
+				strings.Join(fields, ","))
 		}
-	} else {
-		return time.Time{}, err
 	}
+	return time.Time{}, err
 }
 
 func (r ExifToolReader) getMetadata(file *os.File) (*exiftool.FileMetadata, error) {
@@ -64,5 +66,12 @@ func (r ExifToolReader) getMetadata(file *os.File) (*exiftool.FileMetadata, erro
 }
 
 func parseDateTime(v string) (time.Time, error) {
-	return time.Parse("2006:01:02 15:04:05-07:00", v)
+	formats := []string{"2006:01:02 15:04:05", "2006:01:02 15:04:05-07:00"}
+	for _, f := range formats {
+		t, err := time.Parse(f, v)
+		if err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("none of the attempted datetime formats matched")
 }
